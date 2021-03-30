@@ -7,9 +7,6 @@ EXE?=intel
 #which version of avx?
 AVX?=
 
-#should fftw be double precsion
-FFTD?=
-
 #root build directory
 BLD0?=.build
 
@@ -56,9 +53,6 @@ ifneq ($(OMP),)
 		BLD1:=$(BLD1)_omp
 endif
 
-ifneq ($(FFTD),)
-	BLD1:=$(BLD1)_d
-endif
 	BLDDIR:=$(BLD0)/$(BLD1)
 #	FFLAGS+=-traceback -heap-arrays 2048 -fpp -I$(BLDDIR) -module $(BLDDIR)
 	override FFLAGS+=-fpp -module $(BLDDIR)
@@ -111,9 +105,6 @@ ifneq ($(OMP),)
 	BLD1:=$(BLD1)_omp
 endif
 
-ifneq ($(FFTD),)
-	BLD1:=$(BLD1)_d
-endif
 	BLDDIR:=$(BLD0)/$(BLD1)
 
 	#fortran flags
@@ -133,7 +124,6 @@ FSRC    := $(shell find $(SRC) -name '*.f' | sed "s/^\.\///") #get fortran files
 FDEPS   := $(patsubst %.f,$(DEPDIR)/%.d,$(FSRC))  #corresponding dependencies files
 SRCDIRS := $(shell find $(SRC) \( -name '*.cpp' -o -name '*.f' \) -exec dirname {} \; | sort -u)  #all directories where source files live
 
-#object files for making WP/WPx
 SRC:=src
 OBJS := $(patsubst %.cpp,$(BLDDIR)/%.o,$(shell find $(SRC) -name '*.cpp'))  #corresponding object files
 OBJS += $(patsubst %.f,$(BLDDIR)/%.o,$(shell find $(SRC) -name '*.f'))  #corresponding object files
@@ -196,7 +186,7 @@ depdirs:
 		(for dir in $(SRCDIRS); do mkdir -p $(DEPDIR)/$$dir > /dev/null; done)) || \
 		echo "Reusing dependency direcotry $(DEPDIR)"
 
-#only include dependency files if we're actually going to make something (i.e. '', all, WP or WPx)
+#only include dependency files if we're actually going to make something (i.e. '', all, rad)
 ifeq ($(MAKECMDGOALS),$(filter $(MAKECMDGOALS),'' rad all))
 	@echo "Reading dependencies..."
   -include $(CXXDEPS)
@@ -205,7 +195,7 @@ endif
 
 #some help
 help :
-	@echo "make [all|rad|help|clean|clean-deps|distclean] [EXE=intel|gnu] [AVX=|avx|avx2|avx512] [OMP=|1] [FFTD=|1]"
+	@echo "make [all|rad|help|clean|clean-deps|distclean] [EXE=intel|gnu] [AVX=|avx|avx2|avx512] [OMP=|1]"
 	@echo "  default: make all EXE=$(EXE) AVX=$(AVX) OMP=$(OMP)"
 
 #clean out a particular executable set and build sub-directory
