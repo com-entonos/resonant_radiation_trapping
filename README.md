@@ -1,12 +1,12 @@
 # resonant_radiation_trapping
 
-<b>What:</b>
+<b>What:</b><br>
 The generalized Holstein-Biberman-Payne equation describes the resonant radiation temporal and spatial evolution. This may be important for energy balance, ionization source, the spectrum of escaping radiation, ...
 
-<b>This:</b>
+<b>This:</b><br>
 Uses propagator (Green's functions) for resonant radiation trapping. The spatial propagator ("Q") can be expressed as an exact divergence so surface integrals are used to construct a matrix to describe spatial redistribution of radiation. 1D, cylindrical and spherical geometries are supported. Similarly, the frequency propagator/matrix ("J") can be complete or partial frequency redistribution. For partial, there are many options including Jefferies-White approximation (Voigt/Dirac/Doppler lineshape) and coherent and incoherent exact angle averaged scattering.
 
-<b>References:</b>
+<b>References:</b><br>
 Code was used in the following papers:
 
 J.E. Lawler, G.J. Parker and W.N.G. Hitchon, "Radiation trapping simulations using the propagator function method",  J. Quant. Spectros.  Radiat. Transfer. v49, p627 (1993).
