@@ -29,7 +29,10 @@ A.F. Molisch, G.J. Parker, B.P. Oehry, W. Schupita and G. Magerl, "Radiation tra
 <b>Build and run:</b>
 
 	cd source && make rad EXE=gnu && cd ../examples/calc_decay/ && ../../source/rad_gnu
+	
+or if Intel ifort/icc is installed (considerably faster executable)<br>
 
+	cd source && make rad && cd ../examples/calc_decay/ && ../../source/rad_gnu
 
 Original tar ball can be found here: http://parker9.com/ph_prog.html#res
 
