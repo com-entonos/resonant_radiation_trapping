@@ -1,0 +1,435 @@
+							 23 August   1997
+							 18 July     1997
+							 04 July     1997
+							 02 July     1997
+							 10 January  1997
+
+
+PFR, v 1.2, (c) G.J. Parker, 1997
+
+			REFERENCE MANUAL
+			
+			
+this file contains documentation for the propagator method for 
+resonant radiation trapping with partial (and complete) frequency 
+redistribution. the program will be referred to as PFR
+
+the accompaning file title USER MANUAL describes how to run this 
+program while this file documents all of the variables which can be 
+set in the input file.
+
+this program is based, in part, on the following papers:
+
+	J.E. Lawler, G.J. Parker and W.N.G. Hitchon, "Radiation trapping 
+simulations using the propagator function method",  J. Quant. Spectros. 
+Radiat. Transfer. v49, p627 (1993).
+
+      G.J. Parker, W.N.G. Hitchon and J.E. Lawler, "Radiation trapping 
+simulations using the propagator function method: complete and partial 
+frequency redistribution", J. Phys. B v26, p4643, (1993).
+ 
+      A.F. Molisch, G.J. Parker, B.P. Oehry, W. Schupita and 
+G. Magerl, "Radiation trapping with partial frequency redistribution:  
+comparison of approximations and exact solutions", J. Quant. Spectros. 
+Radiat. Transfer v53, p269, (1995).
+
+
+
+the PFR is free, however it must not be given to anyone with out my 
+knowledge and consent. currently, i can be reached at parker9@llnl.gov and/or 
+parker@percy.engr.wisc.edu.  acknowledgements in any work that uses this 
+program in whole or in part is also required. other than these caveats, 
+you can do what you wish with this code.
+
+
+source files:
+------------
+	rad.f- driver routine (fortran source)
+	inputp.f- set up routine for PFR (fortran source)
+	prob.f- routine to calculate propagators J and Q (fortran source)
+	mov.f- routine to step density by a lifetime (fortran source)
+	misc.f - misc. routines for output and functions (fortran source)
+	rad.inc- include file for common blocks (fortran source)
+	Makefile- make file to compile program- works for HP (make file)
+
+input files:
+-----------
+	rad.in- namelist file to define mesh and other parameters
+	and numerous other files which are specified in the above file.
+
+revision history:
+----------------
+	0.1	1993 - 1996 numerous partial releases
+	1.0    10 Jan. 1997 first release
+	1.0.1   2 July 1997 added ability to adjust number of Gaussian 
+			     quadrature points.
+	1.0.2   4 July 1997 enhanced output files and screen output. made 
+			     the determination of frequency mesh automatic
+			     on user description.
+	1.1    18 July 1997 enhanced user specification of frequency mesh
+	1.2    23 Aug. 1997 fixed frequency redistribution propagator for
+			     exact (coherent and incoherent scattering). Also
+			     possible fix for JW plus shifted Doppler for 
+			     extremely transparent gases
+
+philosophy of code:
+------------------
+
+	the PFR is based on a series of papers published while i was at 
+the University of Wisconsin- Madison and later while i was at LLNL. the
+original paper used a different code in that complete frequency redistribution 
+was assumed with a Lortenzian lineshape in slab (plane parallel) and spherical 
+geometries. quickly after that, my colleagues and i moved onto partial frequency 
+redistribution using the standard Jefferies-White approximation and a Voigt 
+lineshape and we included cylindrical geometry. after moving onto LLNL, on the 
+encouragement of A.F. Molisch, i revived the code and incorporated the angle 
+averaged exact redistribution for a pure Doppler lineshape and for a Voigt 
+lineshape. since then, i have extended the program to also do CFR also.
+
+	the program is generally efficient but because of the lack of analytic 
+results for cylindrical geometry, i was forced to use numerical integration 
+(ie Gaussian quadrature) to do the spatial integration to find the Q propagator, 
+accordingly it can take quite awhile to compute. additionally, the exact 
+angle averaged coherent scattering frequency redistribution propagator also must 
+be integrated numerically and can be expensive. other than these two cases, 
+construction of the propagators is generally cheap and the majority of the 
+cpu time is spent finding either the steady-state density profile (if there 
+is an external source) or the decay rate. this is simply a matrix multiplication 
+and could be optimized for the specific computer at hand (see mov.f).
+
+
+definition of problem: 
+---------------------
+
+	The PFR solves the generalized Holstein-Biberman equation for resonant 
+radiation trapping in slab, cylindrical or spherical geometries with Doppler, 
+Voigt, or Lorentz lineshape in the Jefferies-White, modified Jefferies-White, 
+exact angle averaged (either coherent or incoherent scattering) (excluding 
+Lorentzian lineshape) or  CFR approximations. an arbitrary external source of 
+resonant atoms can be specified and the steady state density profile can be 
+solved for or the ratio of trapped decay rate to that of vacuum decay rate can 
+be found. the lineshape is assumed to by symmetric and a simple standard shape- 
+either Doppler, Lorentzian or Voigt.
+
+	the method of solution is to cast the Holstein-Biberman equation in terms
+of kernels or propagators of the intregal-differential equation and then vectorize 
+phase space (space and frequency) which leads to a set of coupled algebraic equations 
+for the resonant atom densities and frequency spectrum. 
+
+
+generation and execution of executable:
+--------------------------------------
+	
+	typing either 'make rad' or 'make rad_d' at the command line
+prompt in the directory which contains the six source files and the Makefile will 
+generate executable code. the latter command will produce a slower but debuggable 
+version of the code. to execute the code, the current directory must contain 
+the input file rad.in. the executable code need not be in the same directory.
+
+input file definitions:
+-----------------------
+
+	as mentioned previously, there is one main input file for the PFR: rad.in
+this file defines the geometry, parameters of the problem, the manner in which 
+the PFR is executed. other input/output files (e.g. external production file) are defined 
+and subsequently read.
+
+>>>> rad.in <<<<
+
+	this file is the first data file read and must exist. the valid entries
+in this file are:	
+
+******
+  zmaxdp	= radius/gap size (cm)
+  tvac		= vacuum lifetime of excited resonant atom (s)
+
+  k_lc_p	= .true.  --> k0 below is the value of k at x = 0
+                .false. --> k0 below is the absorption coefficient integrated over reduced frequency, ie k(x) = k0 L(x)
+  k0		= absorption coefficient (cm^-1)
+  av		= Voigt parameter (#)
+  Pcoll		= probability of a dephasing collision before emission (#)
+
+  jw_p		= use Jefferies-White approximation? 
+  jw_dopp_p	= if jw_p is true, modify JW by replacing delta function w/ shifted Doppler?
+ 
+  pure_dopp_p 	= use Doppler profile for line shape- NOT Voigt ?
+
+  cfr_dopp_p	= CFR with a Doppler profile? ie L_d(x) = exp(-x^2)/sqrt(pi)
+  cfr_lrtz_p	= CFR with a Lorentzian profile? ie L_l(x) = (av/pi) / (x^2 + av^2)
+  cfr_vgt_p	= CFR with a Voigt profile? ie L_v(x) = (av / sqrt(pi^3)) *
+  		    integral from -infty to +infty dw exp(-w^2) / ( (x-w)^2 + av^2)
+  
+  exact_coh_p	= use angle averaged frequency redistribution w/ coherent scattering?
+  exact_incoh_p = use angle averaged frequency redistribution w/ incoherent scattering?
+  
+  izmax		= number of spatial cells (#)
+  ikmax		= number of frequency cells (#)
+  ikbmax        = number of frequency cells between line center and x* where k(x*) zmaxdp = 1 or user specified(#)
+		  if less than 1, ikbmax is determined automatically by code
+  freq_grid	= integer from 0 to 3- specifies how frequency mesh should be generated (#)
+  freq_min	= minimum reduced frequency
+  freq_mid	= mid-range reduced frequency
+  freq_max	= maximum reduced frequency
+  k_min		= minimum value of k
+  k_mid		= mid-range value of k
+  k_max		= maximum value of k
+
+  nave		= initial cell is broken into this many subcells when computing
+  		  the spatial propagator Q (#)
+  num_ndt	= this number times ndt is the maximum # of time steps (#)
+  print_ndt 	= this number times ndt is the number of time steps between printouts (#)
+  ndt		= number of time steps for each call to the 'mover' (#)
+  esc_clear_p 	= zero out escaping spectra histogram after each printout?
+
+  decay_p 	= is this a 'decay' simulation- ie no external source?
+  prod_p	= is this a 'steady-state' simulation? is there an external source?
+
+  slab_p	= is this a slab geometry?
+  cyl_p		= is this a cylindrical geometry?
+  sph_p		= is this a spherical geometry?
+
+  n_phi_gauss   = number of azimuthal points in Gaussian quadrature
+  n_r_gauss     = number of radial points in Gaussian quadrature
+
+  pathname 	= path to where input/output files are
+  prodfile 	= name of production file if this is a prod_p run
+  filedat	= output file root name
+    
+  read_p	= read in a previously saved J and Q propagators?
+  save_p	= save J and Q propagators?
+  oldfile	= if read_p is true, file where J and Q are stored
+  newfile	= if save_p is true, file where J and Q should be saved
+******
+
+zmaxdp	is the radius or gap size in cm. default value is 1.0 cm
+
+tvac is the vacuum lifetime of excited resonant atom (s). default value is 1.0 s
+
+k_lc_p	tells how k0 (see below) is defined. if true then k0 is the value of the absorption
+ coefficient at line center, ie k0 = k(0) = k' L(0), where L(x) is specified lineshape. if
+ false, then k0 is k' in this expression. default is false.
+ 
+k0 is the absorption coefficient either at line center or integrated over reduced frequency. 
+ which one is determined by k_lc_p (see above) in cm^-1. default is 1.e5 cm^-1
+
+av is the  Voigt parameter (#). default value is 0.1
+
+Pcoll is probability of a dephasing collision before emission. this is ignore if the run
+ is a CFR run (ie if any of the following is true: cfr_dopp_p, cfr_lrtz_p or cfr_vgt_p) or
+ if a pure Doppler lineshape is used (ie pure_dopp_p is true). default value is 0.5
+
+the following logicals are mutually exclusive (ie only one of them is true): jw_p, 
+pure_dopp_p, cfr_dopp_p, cfr_lrtz_p, cfr_vgt_p, exact_coh_p and exact_coh_p. if there is 
+more than one which is true or none of them is true the following logic, in the order given, 
+is followed:
+  if jw_p          is true, then all others are set to false
+  if exact_coh_p   is true, then all others are set to false
+  if exact_incoh_p is true, then all others are set to false
+  if pure_dopp_p   is true, then all others are set to false
+  if cfr_dopp_p    is true, then all others are set to false
+  if cfr_lrtz_p    is true, then all others are set to false
+  if cfr_vgt_p     is true, then all others are set to false
+  otherwise all set to false except for jw_p which is set to true
+
+jw_p is true if the Jefferies-White approximation should be used. a Voigt lineshape is assumed.
+ R(x, x') = L_v(x') { (1-pcoll) { [1-a(x')] L_d(x) + a(x') delta(x'-x)} + Pcoll L_v(x) }, 
+ where a(x) = max(0, min(1, 1 - L_d(x) / L_v(x) )) and delta(x) is dirac delta function. 
+ default is false.
+ 
+jw_dopp_p is true if Jefferies-White approximation should be modified by replacing the 
+ delta function w/ shifted Doppler lineshape. only used if jw_p is true. 
+  R(x, x') = L_v(x') { (1-pcoll) { [1-a(x')] L_d(x) + a(x') L_d(x'-x)} + Pcoll L_v(x) }
+  default is false.
+ 
+pure_dopp_p is true if a pure Doppler profile should be used. Pcoll, av is ignored. 
+ R(x, x') = 0.5 * erfc( x>), where erfc is the complementary error function and 
+ x> = max( x, x'). default is false.
+
+cfr_dopp_p is true if CFR with a Doppler profile should be used. Pcoll and av ignored. 
+ R(x', x') = L_d(x) L_d(x'). default is false.
+
+cfr_lrtz_p is true if CFR with a Lorentzian profile should be used. pcoll and av ignored.
+ R(x', x') = L_l(x) L_l(x'). default is false.
+ 
+cfr_vgt_p is true if CFR with a Voigt profile should be used. pcoll ignored. 
+ R(x', x') = L_v(x) L_v(x'). default is false.
+  
+exact_coh_p is true if angle averaged frequency redistribution w/ coherent scattering should
+ be used. R(x,x') = 1/sqrt(pi^3) integral from (x> - x<)/2 to +infty du exp(-u^2) 
+ [atan( (x< + u)/av ) - atan( (x> - u)/av )], where x> = max( x, x'), x< = min( x, x'). 
+ default is false.
+ 
+exact_incoh_p is true if angle averaged frequency redistribution w/ incoherent scattering
+ should be used.  R(x,x') = 1/sqrt(pi^5) integral from 0 to +infty du exp(-u^2) 
+ [atan( (x + u)/av ) - atan( (x - u)/av )] [atan( (x' + u)/av ) - atan( (x' - u)/av )].
+ default is false.
+  
+izmax is the number of spatial cells (#). default is the maximum array is declared: zid,
+ see rad.inc.
+ 
+ikmax is the number of frequency cells (#). default is the maximum array is declared: kid,
+ see rad.inc.
+
+ikbmax  is the number of frequency cells between line center and x* where k(x*) zmaxdp = 1 (#)
+ or freq_mid or k_mid = k(x*), see below. if ikbmax < 1, then ikbmax is determined automatically.  
+ default is -1.
+
+freq_grid is an integer between 0 and 3, inclusive. if outside of this range, it's set to
+ 1. the values mean the following:
+   0 -> generate frequency mesh old way using ikbmax- NOT recommended
+   1 -> generate frequency mesh automatically based on variation of k(x). this is the 
+       same as freq_grid = 2 with k_max = min( k0, -2 ln(1.e-6) / (zmaxdp/izmax) ),
+       k_min = - k0 ln(0.99) / (2 zmaxdp), k_mid = exp( 0.5 ( ln(k_min) + ln(k_max) ) )
+   3 -> use the frequencies specified by freq_min, freq_mid and freq_max for the 
+       minimum frequency, frequency where high resolution should be around and maximum
+       frequency. if any of these values less than 0, then use value computed as in 
+       freq_grid=1.
+   2 -> use the frequencies corresponding to k(x) = k_max, k_mid, k_min. if any of these 
+       values less than 0, then use value computed as in freq_grid=1.
+ the frequency cells will be the finest around freq_mid/k_mid. default is 1
+ 
+freq_min is minimum reduced frequency if freq_grid = 3. default is -1.
+
+freq_mid is mid-range reduced frequency if freq_grid = 3. default is -1.
+
+freq_max is maximum reduced frequency if freq_grid = 3. default is -1.
+
+k_min is minimum value of k(x) if freq_grid = 2. default is -1.
+
+k_mid is mid-range value of k(x) if freq_grid = 2. default is -1.
+
+k_max is maximum value of k(x) if freq_grid = 2. default is -1.
+ 
+nave is the number of subcells each initial cell is broken into when computing the 
+ spatial propagator Q (#). default is 2.
+ 
+num_ndt is the maximum calls to the 'mover'. default is 10000.
+
+print_ndt is the number times mover is called between printouts. default is 10.
+
+ndt is number of time steps (vacuum decay lifetimes) for each call to the 'mover'. 
+ default is 100.
+
+esc_clear_p is true if escaping spectra histogram should be reset after each printout.
+ default is true.
+
+decay_p and prod_p are mutually exclusive. 
+
+prod_p is true if steady-state calculation is to be performed. if so the prodfile must exist 
+ in the directory given by pathname. if it doesn't, prod_p is set to false and decay_p 
+ is set to true. otherwise, decay_p is set to false. default is false.
+
+decay_p is true if this a 'decay' simulation. default is true.
+
+slab_p, cyl_p and sph_p are mutually exclusive. if all are false or more than one is true 
+the following logic is used:
+ if cyl_p  is true, then others are set to false.
+ if slab_p is true, then others are set to false.
+ if sph_p  is true, then others are set to false.
+ otherwise cyl_p is set to true and others to false.
+ 
+slab_p is true for slab geometry. default is false.
+
+cyl_p is true for cylindrical geometry. default is true.
+
+sph_p is true for spherical geometry. default is false.
+
+n_phi_gauss is the number of azimuthal points in Gaussian quadrature if the 
+ geometry is cylindrical (ie cyl_p = true), otherwise ignored. default is 300, range 
+ between 50 and 400.
+
+n_r_gauss is number of radial points in Gaussian quadrature if the geometry is
+ cylindrical (ie cyl_p = true), otherwise ignored. default is max(1, int(nave / 2) ).
+
+pathname is the directory for prodfile and output files. if set to null then current directory
+ is used. default is null.
+
+prodfile is the name of production file if  prod_p is true. it's in the directory given by
+ pathname. default is 'none'.
+ 
+filedat is the name of output files. default is 'rad.out'.
+    
+read_p	is true if a previously stored J and Q propagators are to be read in. if true, file
+ is in the directory given by pathname and file is given in oldfile. if there is an error 
+ trying to read this file, read_p is set to false and the run continues. otherwise all of the 
+ variables in this file are IGNORED (ie set to the values which are stored in this data 
+ file) EXCEPT for the following list: num_ndt, print_ndt, ndt, decay_p, prod_p, prodfile,
+ filedat, pathname, esc_clear_p, read_p, save_p, oldfile and newfile. default is false
+ 
+save_p	is true if J and Q propagators are to be saved. if true, data will be saved to the 
+ file specified by newfile in the directory given by pathname. default is true.
+ 
+oldfile is the data file in the directory given by pathname to be read if read_p is true.
+ default is 'oldprop.dat'.
+ 
+newfile is the data file in the directory given by pathname where J and Q are to be saved
+ if save_p is true. default is 'newprop.dat'.
+
+
+>>>> prodfile <<<<
+
+	this string is the name of the external production rate of resonant atoms.
+this file is required if prod_p is true. if it doesn't exist in the directory given 
+by pathname, prod_p is set to false and decay_p is set to true. 
+
+if the file exists, it is scanned for valid entries. a valid entry starts with at 
+least four (4) '>' on a newline. on the next non-blank line should be the production 
+rate (1/cm^3/s) of the external source for the leftmost cell in slab geometry or the 
+inner most radius cell for cylindrical/spherical geometry. there should be izmax-1 
+more numbers for each remaining cell moving to larger z or r, respectively.
+	
+there must be at least izmax numbers. anything after the last number is ignored.
+
+
+
+output:
+------
+
+PFR writes to standard output device what it has read from rad.in and/or oldfile 
+as the case may be. it then proceeds to the calculation of J and Q if they are not 
+read in. 
+
+if prod_p is true and prodfile was successfully read in, the program will then 
+produce output files according to ndt, print_ndt and num_ndt and will exit once the 
+specified number of time steps have been executed.
+
+if decay_p is true, then after each call to the 'mover', the current ratio of 
+decay rate to vacuum decay rate is printed along with the total number of excited 
+resonant atoms left in the volume. also output files will be saved according to 
+ndt, print_ndt and num_ndt. the simulation will continue until the number of specified
+time steps have been executed or the number of excited resonant atoms in the discharge 
+falls below 1.e-22. [this number is not an integer!]
+
+output files are named according to filedat with an integer appended to the 
+file name for each printout in ascending order starting at 0.
+
+the first section of the output files show the density profile of excited resonant
+atoms a a function of position. density, number and density / maximum density are 
+all shown as a function of position (z or r). densities are in 1/cm^3
+
+the section section shows the spectrum escaping the system. the density is simply 
+the number of photons divided by the frequency cell width. number is the raw 
+number of photons in any given frequency cell. number is not shown for slab geometry, 
+but spectrum density for each plane IS shown. if esc_clear_p is true, then this 
+spectrum is cleared after each printout. otherwise it's the running sum of escaping 
+photons.
+
+
+
+bug reports:
+-----------
+
+known bugs:
+ 
+1) for small values of k0, the spatial propagator Q may become numerically unstable.
+   this manifests itself by giving incorrect density profiles and decay rates. this is 
+   simply a problem of the accuracy in the expressions needed in computing Q. more accurate 
+   expressions could result in better results.
+2) excessive values of nave can lead to strange results. safe value is 2.
+
+when you run across a bug/error (notice i said when), please fill out a 
+brief but informative report and send to me. also, if you have squashed a bug 
+which is in the original code, i would like to know that also.
+
+
+EOF

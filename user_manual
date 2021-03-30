@@ -1,0 +1,227 @@
+							 30 August   1997
+PFR, v 1.2, (c) G.J. Parker, 1997
+
+
+		USER MANUAL
+		
+this document gives a rather brief overview on how to run the 
+resonant radiation trapping program (PFR). documentation on 
+every variable which can be set can be found in the accompanying 
+reference manual.
+
+program control is determined by the variables which are set in the 
+file "rad.in" which must reside in the directory from which the program 
+is executed. unless otherwise noted, variables referred to below are in 
+this data file.
+
+1) geometry:
+
+ a) slab_p, cyl_p, sph_p
+   the simulation supports three geometries: infinite plane parallel, infinite 
+   cylindrical and spherical. the corresponding symmetries are assumed so that 
+   only one space coordinate (z, rho, r, respectively) is needed. the other two 
+   coordinates are automatically integrated over.
+   
+   infinite plane parallel: slab_p = .true.,  cyl_p = .false., sph_p = .false. 
+   infinite cylindrical:    slab_p = .false., cyl_p = .true.,  sph_p = .false. 
+   spherical:               slab_p = .false., cyl_p = .false., sph_p = .true. 
+
+ b) zmaxdp (cm)
+   next the size of the system must be set. regardless of the geometry chosen, 
+   the size is set via the variable zmaxdp which is in cm. zmaxdp is the gap 
+   size for plane parallel or the outer radius for cylindrical/spherical geometry.
+
+
+2) physical parameters: 
+
+ a) tvac (s)
+   the vacuum lifetime of the resonant atoms is the time step of the simulation 
+   and therefore mostly irrelevant for the majority of the simulation since time
+   is measured in units of the vacuum lifetime. 
+
+ b) k0 (cm^-1), k_lc_p
+   the line center absorption coefficient is given by k0. k0 has been defined different
+   ways by different authors. if k_lc_p is true the k0 is k(0), that is the value of 
+   the absorption coefficient at line center. since the lineshapes used in this 
+   simulations are normalized so that the integral over reduce frequency is 1, 
+   L(0) <> 1 for any lineshape L(x). k(x) = k'L(x) means that if the k0 is suppose 
+   to be k(0) (i.e. k_lc_p is true) then k0 = k' L(0) ==> k' = k0 / L(0). if k_lc_p 
+   is false, then k0 is k'.
+   
+ c) av
+   for voigt or lorentz lineshape, av is the 'voigt/lorentz' parameter. it's not used 
+   for doppler profiles. in other words, for a lorentz profile, 
+   L_l(x) = (av/pi) / (x^2 + av^2) and for voigt, L_v(x) =(av / sqrt(pi^3)) *
+   integral from -infty to +infty dw exp(-w^2) / ( (x-w)^2 + av^2). obviously, 
+   a doppler profile, L_d(x) = exp(-x^2)/sqrt(pi), is independent of av
+   
+ d) pcoll
+   if this simulation is not a complete frequency redistribution (CFR) simulation, 
+   then the atom may or may not have a 'dephasing' collisions before it has a chance 
+   to re-emit the photon. pcoll gives the probability that such a collision will 
+   occur.
+   
+
+3) frequency redistribution.
+   out of all the logicals in this section, only one should be set equal to true. all 
+   others should be set to false (w/ the possible exception of jw_dopp_p). for details 
+   on what happens if this is not true, see the REFERENCE MANUAL
+
+ a) cfr_dopp_p, cfr_lrtz_p, cfr_vgt_p
+   for CFR, one of the above logicals should be set corresponding to having CFR for 
+   a doppler (cfr_dopp_p), lorentz (cfr_lrtz_p) or voigt (cfr_vgt_p) lineshape, i.e.
+   R(x, x') = L(x) L(x')
+   
+ b) jw_p (jw_dopp_p), pure_dopp_p, exact_coh_p, exact_incoh_p
+   for PFR, current options are Jefferies-White approximation (jw_p AND not jw_dopp_p):
+     R(x, x') = L_v(x') { (1-pcoll) { [1-a(x')] L_d(x) + a(x') delta(x'-x)} + Pcoll L_v(x) },
+   where a(x) = max(0, min(1, 1 - L_d(x) / L_v(x) )) and delta(x) is dirac delta function;
+
+   Jefferies-White but w/ a shifted doppler instead of delta (jw_p AND jw_dopp_p):
+     R(x, x') = L_v(x') { (1-pcoll) { [1-a(x')] L_d(x) + a(x') L_d(x'-x)} + Pcoll L_v(x) };
+     
+   pure doppler profile (pure_dopp_p):
+     R(x, x') = 0.5 * erfc( x>), where erfc is the complementary error function and 
+   x> = max( x, x');
+
+   angle averaged frequency redistribution w/ coherent scattering (exact_coh_p):
+     R(x,x') = (1-pcoll)/sqrt(pi^3) integral from (x> - x<)/2 to +infty du exp(-u^2) 
+       [atan( (x< + u)/av ) - atan( (x> - u)/av )] + pcoll * L_v(x), 
+   where x> = max( x, x'), x< = min( x, x'); 
+
+   angle averaged frequency redistribution w/ incoherent scattering (exact_incoh_p):
+     R(x,x') = (1-pcoll)/sqrt(pi^5) integral from 0 to +infty du exp(-u^2) 
+       [atan( (x + u)/av ) - atan( (x - u)/av )] [atan( (x' + u)/av ) - atan( (x' - u)/av )]+
+       pcoll * L_v(x).
+
+
+4) type of simulation
+
+ a) decay_p
+   if the fundamental decay rate is wanted, then decay_p should .true. and prod_p .false.
+   
+ b) prod_p, prodfile
+   if there is an external production and the steady-state resonant atom density profile 
+   is desired, then prod_p should be .true. while decay_p would be .false. prodfile is 
+   the name of a file (in the directory given by pathname if one is specified otherwise 
+   assumed to be in the current working directory) which gives the external production 
+   rate (1/cm^3/s) for each spatial cell. details of format of this data file can be 
+   found in the REFERENCE MANUAL. In a nutshell, the data file is scanned until at least 
+   four '>' at a start of a new line is encountered. then there must be izmax (see below) 
+   numbers. the first number is for the spatial cell closest to z (, rho or r) = 0 and 
+   the last number is for the spatial cell closest to z (rho or r) = zmaxdp. these numbers 
+   are the external production rate (1/cm^3/s) of resonant atoms. spatial cells are of 
+   uniform width. the rest of the data file is ignored.
+
+
+5) computational mesh
+
+ a) izmax
+   the spatial mesh has cells of equal width and the number is determined by izmax. izmax
+   must be less than the parameter zid (found in rad.inc) otherwise zid must be increased 
+   and the code recompiled.
+   
+ b) ikmax
+   the frequency mesh has cells of UNEQUAL spacing which can either be set automatically 
+   or controlled by further user defined variables. ikmax is the total number of frequency 
+   cells and must be less than the parameter kid (found in rad.inc) otherwise kid must be 
+   increased and the code recompiled.
+   
+ c) freq_grid, ikbmax, freq_min, freq_mid, freq_max, k_min, k_mid, k_max
+   the frequency mesh is constructed according to the value of freq_grid
+   
+   freq_grid = 0 generates the frequency mesh in an obsolete way- NOT recommended!
+   freq_grid = 1 generates the frequency mesh automatically based on variation of k(x). 
+       this is the same as freq_grid = 2 with k_max = min( k0, -2 ln(1.e-6) / (zmaxdp/izmax) ),
+       k_min = - k0 ln(0.99) / (2 zmaxdp), k_mid = exp( 0.5 ( ln(k_min) + ln(k_max) ) ). 
+       recommended for first (if not final) try.
+   freq_grid = 3 generates the frequency mesh using the minimum frequency from line center 
+       (freq_min), frequency where high resolution should be around (freq_mid) and maximum 
+       frequency (freq_max).
+   freq_grid = 2 generates the frequency mesh using the frequencies corresponding to 
+       the maximum k(x) (k_max), the k(x) where the finest resolution should be (k_mid) and 
+       the minimum k(x) (k_min).
+       
+   if ikbmax is < 2 or > ikmax-2, then ikbmax is ignored. otherwise ikbmax gives the 
+   number of frequency cells between line center and where the finest resolution should 
+   be. recommended to be set equal to -1.
+ 
+
+6) internal simulation parameters
+
+ a) ndt
+   number of time steps (vacuum lifetimes) that will be performed to each call to the 
+   'move' routine. a typical number would be 100, though 1 could be used just as well!
+   output to the screen (for decay simulations- effective lifetime and number of resonant 
+   atoms left in discharge; for steady-state simulations- the number of resonant atoms in
+   the discharge) is printed after each call to the mover. so, you want a decent number, 
+   otherwise you'll get a lot of output to the screen.
+   
+ b) print_ndt, filedat, esc_clear_p.
+   after print_ndt calls to the mover (print_ndt * ndt time steps!), an output data file 
+   will be dumped in the directory given by pathname (current working directory if pathname 
+   is not defined) with name given filedat. each output will be appended with an ascending 
+   number. the output files give both the spatial profile of resonant atoms and the frequency
+   spectrum of the escaping radiation. if esc_clear_p is true, then the escaping histogram 
+   spectrum is cleared after each printout. otherwise the spectrum is the sum through out 
+   the entire history of the run for each printout.
+   
+ c) num_ndt
+   after num_ndt calls to the mover (num_ndt * ndt time steps), the code will stop. if this 
+   a decay simulation, the code would also stop if the number of resonant atoms drop to a 
+   level too small.
+   
+ d) n_phi_gauss, n_r_gauss
+   if in cylindrical geometry, the spatial propagator must be found via numerical 
+   integration. Gaussian quadrature is chosen to do this. n_phi_gauss is the number of 
+   azimuthal points used in the integration while n_r_gauss is the number used in the 
+   radial integration. the maximum values are 300 and 20, respectively. recommended values 
+   would be 300 and 1.
+   
+ e) nave
+   in the calculation of the spatial propagator, nave gives the number of points that the 
+   INITIAL cell should be averaged over. for slab and spherical geometries, this can be 
+   large (~20 works well) and it's not expensive. for cylindrical, it should be at least 
+   2 but large values will take quite awhile to compute the propagator. if you have time or 
+   a fast computer, large values are typically better. (don't know since i have neither!)
+
+ f) read_p, oldfile
+   instead of recalculating the propagators, you can read in a previously saved one. this 
+   is done if read_p is true and oldfile contains a name of such a data file (in the 
+   directory pathname or in the current working directory if pathname is not set). if the 
+   file does exist, then the following variables are reset to the values specified in 
+   the data file oldfile: zmaxdp, k0, tvac, izmax, nave, slab_p, cyl_p, sph_p, ikmax,
+   ikbmax, av, pcoll, jw_p, jw_dopp_p, pure_dopp_p, cfr_dopp_p, cfr_lrtz_p, cfr_vgt_p,
+   exact_coh_p, exact_incoh_p, n_phi_gauss, n_r_gauss
+
+ g) save_p, newfile
+   if save_p is true, then the propagators will be saved to the data file newfile (in 
+   the directory given by pathname or in the current working directory if not set). 
+ 
+
+7) Analysis
+
+   at this time, you should be able to execute the code and hopefully get some output. the 
+   question is then whether you believe what the code is saying. 
+   
+ a) decay simulations: during the simulation, the code will print out the instantaneous decay 
+   rate. this number should go smoothly to some fixed value and stay there. if it doesn't,
+   you should increase the duration of the simulation (num_ndt) and try again. if it still 
+   doesn't settle down, you may want to change the frequency mesh (see below)
+
+ b) steady-state simulations: during the simulation, the code will print out the instaneous 
+   total number of resonant atoms in the discharge. this number should eventually reach a 
+   fixed number. if not, increase num_ndt until it does.
+   
+ once you are reasonably convinced that the code has found a steady-state solution or the 
+ fundamental decay rate, looking at the last output file (filedat) is essential. looking 
+ at the escaping frequency spectrum, the peak (the ratio column) should be close to the finest 
+ resolution in frequency and drop off smoothly on each side. at large frequency, this number 
+ should be close to zero. if it isn't, you may want to increase the maximum frequency (or 
+ similarly decrease the minimum k(x)) by using freq_grid. on the other hand, if there are 
+ many large frequency cells which are zero (or *very* small), then you may want to decrease 
+ (increase) the maximum frequency (minimum k(x)). near line center, if many cells are zero 
+ and this is not an extremely opaque case, you may want to increase (decrease) the minimum 
+ frequency (maximum k(x)). 
+
+EOF

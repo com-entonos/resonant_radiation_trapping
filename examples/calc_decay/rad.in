@@ -1,0 +1,70 @@
+namelist data file that is for the
+Partial Frequency Redistribution (PFR) 
+radiation transport program.
+
+G.J. Parker (c) 1997
+
+
+$rad
+
+  zmaxdp	= 1.0d0
+  tvac		= 8.6d-9
+
+  k_lc_p	= .true.
+  k0		= 1.d4
+  av		= 4.88659
+  Pcoll		= 0.d0
+
+  jw_p		= .false.
+   jw_dopp_p	= .false.
+  
+  pure_dopp_p 	= .false.
+  
+  cfr_dopp_p	= .false.
+  cfr_lrtz_p	= .true.
+  cfr_vgt_p	= .false.
+  
+  exact_coh_p	= .false.
+  exact_incoh_p = .false.
+
+  izmax		= 50
+  ikmax		= 50
+  ikbmax	= -1
+  freq_grid	= 1
+
+  nave		= 2
+  num_ndt	= 40
+  print_ndt 	= 10
+  ndt		= 50
+  esc_clear_p	 = .true.
+
+  decay_p 	= .true.
+  prod_p	= .false.
+
+  slab_p	= .true.
+  cyl_p		= .false.
+  sph_p		= .false.
+
+  pathname 	= ' '
+  prodfile 	= 'prod.dat'
+  filedat	= 'rad.out'
+    
+  read_p	= .false.
+  save_p	= .false.
+  oldfile	= 'old_prop.dat'
+  newfile	= 'new_prop.dat'
+
+$end
+
+for Ar discharge:
+
+0.15 Torr:
+  k0		= 2302.75411361
+  av		= 0.00354224151095
+  Pcoll	= 0.211042297642
+
+0.01 Torr:
+  k0		= 153.516940907
+  av		= 0.00354224151095
+  Pcoll	= 0.211042297642
+
